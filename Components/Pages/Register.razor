@@ -1,0 +1,115 @@
+@page "/register"
+@using Bolao.Data
+@using Bolao.Models
+@using Bolao.Helpers
+@using Microsoft.EntityFrameworkCore
+@inject BolaoDbContext DbContext
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Registro - Bolão Copa 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudCard Elevation="4" Style="border-radius: 16px; border: 1px solid #e2e8f0;">
+        <MudCardHeader Style="background: linear-gradient(135deg, #1b5e20 0%, #123c15 100%); color: white; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+            <CardHeaderContent>
+                <div class="d-flex flex-column align-center justify-center py-4">
+                    <MudText Typo="Typo.h5" Style="font-weight: bold; font-family: 'Outfit', sans-serif;">📝 CRIAR CONTA</MudText>
+                    <MudText Typo="Typo.body2" Style="opacity: 0.9;">Registre-se para participar dos bolões</MudText>
+                </div>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent Class="pa-6">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4" Style="border-radius: 8px;">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <MudForm @ref="_form" @bind-IsValid="_isValid">
+                <MudTextField T="string" Label="Nome Completo" @bind-Value="_nome" Required="true" Variant="Variant.Outlined" Class="mb-4" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person" />
+                <MudTextField T="string" Label="E-mail" @bind-Value="_email" Required="true" InputType="InputType.Email" Variant="Variant.Outlined" Class="mb-4" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
+                <MudTextField T="string" Label="Senha" @bind-Value="_senha" Required="true" InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-4" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+                <MudTextField T="string" Label="Confirmar Senha" @bind-Value="_confirmarSenha" Required="true" InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-6" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+                <MudButton OnClick="HandleRegister" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large" Disabled="!_isValid || _loading" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                        <MudText Class="ms-2">Processando...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Registrar</MudText>
+                    }
+                </MudButton>
+            </MudForm>
+        </MudCardContent>
+        <MudCardActions Class="justify-center pb-6">
+            <MudText Typo="Typo.body2">Já tem uma conta? <MudLink Href="/login" Style="font-weight: bold;">Faça login</MudLink></MudText>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+    private bool _isValid;
+    private bool _loading;
+
+    private string _nome = string.Empty;
+    private string _email = string.Empty;
+    private string _senha = string.Empty;
+    private string _confirmarSenha = string.Empty;
+    private string? _errorMessage;
+
+    private async Task HandleRegister()
+    {
+        if (_form == null) return;
+        await _form.Validate();
+
+        if (!_form.IsValid) return;
+
+        if (_senha != _confirmarSenha)
+        {
+            _errorMessage = "A senha e a confirmação de senha não coincidem.";
+            return;
+        }
+
+        _loading = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Check if user exists
+            var existingUser = await DbContext.Usuarios.AnyAsync(u => u.Email == _email);
+            if (existingUser)
+            {
+                _errorMessage = "Este endereço de e-mail já está cadastrado.";
+                _loading = false;
+                return;
+            }
+
+            var newUser = new Usuario
+            {
+                Nome = _nome,
+                Email = _email,
+                Senha = PasswordHasher.Hash(_senha),
+                IsAdmin = false
+            };
+
+            DbContext.Usuarios.Add(newUser);
+            await DbContext.SaveChangesAsync();
+
+            NavigationManager.NavigateTo("/login?registered=true");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocorreu um erro ao realizar o cadastro: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

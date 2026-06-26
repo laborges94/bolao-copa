@@ -1,0 +1,400 @@
+@page "/admin"
+@attribute [Authorize]
+@using Bolao.Models
+@using Bolao.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject BolaoDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Painel Administrativo - Bolão Copa 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <div class="mb-6">
+        <MudText Typo="Typo.h4" Style="font-weight: 800; font-family: 'Outfit', sans-serif;">🛡️ PAINEL ADMINISTRATIVO</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">Gerencie bolões, partidas e lance resultados oficiais</MudText>
+    </div>
+
+    <MudTabs Elevation="3" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Error">
+        <!-- ABA GERENCIAR BOLÕES -->
+        <MudTabPanel Text="🏆 Gerenciar Bolões" Icon="@Icons.Material.Filled.Leaderboard">
+            <MudGrid>
+                <!-- Form criar bolão -->
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="2" Style="border-radius: 12px;">
+                        <MudCardHeader Style="background-color: #fafafa; border-bottom: 1px solid #eee;">
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6" Style="font-weight: bold;">➕ Cadastrar Novo Bolão</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent Class="pa-6">
+                            <MudTextField T="string" Label="Nome do Bolão" @bind-Value="_novoBolaoNome" Placeholder="Ex: Bolão dos Amigos" Variant="Variant.Outlined" Class="mb-6" />
+
+                            <MudButton OnClick="CriarBolao" Variant="Variant.Filled" Color="Color.Error" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Add" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                                Criar Bolão
+                            </MudButton>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Listagem bolões -->
+                <MudItem xs="12" md="8">
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">📋 Lista de Bolões</MudText>
+
+                        <MudTable Items="_boloes" Hover="true" Striped="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Nome</MudTh>
+                                <MudTh>Código</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Ações</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Nome" Style="font-weight: bold;">@context.Nome</MudTd>
+                                <MudTd DataLabel="Código"><code style="color: #c2410c; font-weight: bold;">@context.CodigoConvite</code></MudTd>
+                                <MudTd DataLabel="Status">
+                                    @if (context.Encerrado)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Encerrado</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">Ativo</MudChip>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Ações">
+                                    <MudButton OnClick="@(() => ToggleBolaoStatus(context))" Variant="Variant.Outlined" Color="@(context.Encerrado ? Color.Success : Color.Error)" Size="Size.Small" Style="border-radius: 6px;">
+                                        @(context.Encerrado ? "Ativar" : "Encerrar")
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+
+        <!-- ABA LANÇAR RESULTADOS -->
+        <MudTabPanel Text="⚽ Lançar Resultados" Icon="@Icons.Material.Filled.SportsSoccer">
+            <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-2">📋 Lista de Partidas - 16 Avos de Final</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Insira o resultado oficial dos confrontos para recalcular automaticamente os pontos de todos os palpites dos usuários.</MudText>
+
+            <MudTable Items="_partidas" Hover="true" Striped="true" Elevation="1" Style="border-radius: 12px; overflow: hidden;">
+                <HeaderContent>
+                    <MudTh Style="font-weight: bold; width: 80px;">Jogo</MudTh>
+                    <MudTh Style="font-weight: bold;">Data & Hora</MudTh>
+                    <MudTh Style="font-weight: bold; text-align: right; width: 250px;">Time Casa</MudTh>
+                    <MudTh Style="font-weight: bold; text-align: center; width: 180px;">Placar Oficial</MudTh>
+                    <MudTh Style="font-weight: bold; text-align: left; width: 250px;">Time Visitante</MudTh>
+                    <MudTh Style="font-weight: bold; width: 150px;">Status</MudTh>
+                    <MudTh Style="font-weight: bold; width: 120px;"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Jogo" Style="font-weight: bold;">#@context.Numero</MudTd>
+                    <MudTd DataLabel="Data & Hora">@context.DataHora.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+                    <MudTd DataLabel="Time Casa" Style="text-align: right;">
+                        <span style="font-weight: 600;" Class="mr-2">@context.TimeCasa?.Nome</span>
+                        <span style="font-size: 1.25rem;">@context.TimeCasa?.Bandeira</span>
+                    </MudTd>
+                    <MudTd DataLabel="Placar Oficial" Style="text-align: center;">
+                        <div class="d-flex align-center gap-2 justify-center">
+                            <input type="number" 
+                                   value="@GetTempGolsCasa(context.Id)" 
+                                   @onchange="@((ChangeEventArgs e) => SetTempGolsCasa(context.Id, e.Value))"
+                                   class="placar-input-admin" />
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">x</MudText>
+                            <input type="number" 
+                                   value="@GetTempGolsVisitante(context.Id)" 
+                                   @onchange="@((ChangeEventArgs e) => SetTempGolsVisitante(context.Id, e.Value))"
+                                   class="placar-input-admin" />
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Time Visitante" Style="text-align: left;">
+                        <span style="font-size: 1.25rem;" Class="mr-2">@context.TimeVisitante?.Bandeira</span>
+                        <span style="font-weight: 600;">@context.TimeVisitante?.Nome</span>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.Finalizada)
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Finalizada</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Text">Aberta</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudButton OnClick="@(() => SalvarResultadoOficial(context))" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Save" Style="border-radius: 6px; font-weight: bold;">
+                            Salvar
+                        </MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+<style>
+    .placar-input-admin {
+        width: 40px;
+        height: 35px;
+        text-align: center;
+        font-size: 1rem;
+        font-weight: bold;
+        border: 2px solid #cbd5e1;
+        border-radius: 6px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .placar-input-admin:focus {
+        border-color: #d92424;
+    }
+    /* Chrome, Safari, Edge, Opera */
+    .placar-input-admin::-webkit-outer-spin-button,
+    .placar-input-admin::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    /* Firefox */
+    .placar-input-admin[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+@code {
+    private int _userId;
+    private bool _loading = true;
+
+    // Criar bolão
+    private string _novoBolaoNome = string.Empty;
+    private List<Models.Bolao> _boloes = new();
+
+    // Lançar resultados
+    private List<Partida> _partidas = new();
+    private Dictionary<int, int?> _tempGolsCasa = new();
+    private Dictionary<int, int?> _tempGolsVisitante = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!state.User.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/login", true);
+            return;
+        }
+
+        var isAdminClaim = state.User.FindFirst("IsAdmin")?.Value;
+        if (isAdminClaim != "True")
+        {
+            NavigationManager.NavigateTo("/", true);
+            return;
+        }
+
+        var userIdStr = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdStr, out var id))
+        {
+            _userId = id;
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+
+        _boloes = await DbContext.Boloes.OrderByDescending(b => b.CriadoEm).ToListAsync();
+        
+        _partidas = await DbContext.Partidas
+            .Include(p => p.TimeCasa)
+            .Include(p => p.TimeVisitante)
+            .OrderBy(p => p.Numero)
+            .ToListAsync();
+
+        foreach (var p in _partidas)
+        {
+            if (!_tempGolsCasa.ContainsKey(p.Id))
+            {
+                _tempGolsCasa[p.Id] = p.GolsCasa;
+            }
+            if (!_tempGolsVisitante.ContainsKey(p.Id))
+            {
+                _tempGolsVisitante[p.Id] = p.GolsVisitante;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task CriarBolao()
+    {
+        if (string.IsNullOrWhiteSpace(_novoBolaoNome))
+        {
+            Snackbar.Add("Digite o nome do bolão!", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var codigo = GenerateInviteCode();
+
+            // Garantir unicidade do código de convite
+            while (await DbContext.Boloes.AnyAsync(b => b.CodigoConvite == codigo))
+            {
+                codigo = GenerateInviteCode();
+            }
+
+            var novoBolao = new Models.Bolao
+            {
+                Nome = _novoBolaoNome.Trim(),
+                CodigoConvite = codigo,
+                CriadoEm = DateTime.UtcNow,
+                CriadoPorId = _userId,
+                Encerrado = false
+            };
+
+            DbContext.Boloes.Add(novoBolao);
+            await DbContext.SaveChangesAsync();
+
+            Snackbar.Add($"Bolão '{novoBolao.Nome}' criado com sucesso!", Severity.Success);
+            _novoBolaoNome = string.Empty;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao criar bolão: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string GenerateInviteCode()
+    {
+        var random = new Random();
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var part1 = new string(Enumerable.Repeat(chars, 4).Select(s => s[random.Next(s.Length)]).ToArray());
+        var part2 = new string(Enumerable.Repeat(chars, 4).Select(s => s[random.Next(s.Length)]).ToArray());
+        return $"COPA-{part1}-{part2}";
+    }
+
+    private async Task ToggleBolaoStatus(Models.Bolao bolao)
+    {
+        try
+        {
+            bolao.Encerrado = !bolao.Encerrado;
+            DbContext.Boloes.Update(bolao);
+            await DbContext.SaveChangesAsync();
+            
+            Snackbar.Add($"Status do bolão '{bolao.Nome}' atualizado!", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao atualizar bolão: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Helpers para manipulação de inputs de placar de forma segura
+    private int? GetTempGolsCasa(int partidaId)
+    {
+        return _tempGolsCasa.TryGetValue(partidaId, out var val) ? val : null;
+    }
+
+    private void SetTempGolsCasa(int partidaId, object? val)
+    {
+        if (val == null || string.IsNullOrWhiteSpace(val.ToString()))
+        {
+            _tempGolsCasa[partidaId] = null;
+        }
+        else if (int.TryParse(val.ToString(), out var result))
+        {
+            _tempGolsCasa[partidaId] = result >= 0 ? result : 0;
+        }
+    }
+
+    private int? GetTempGolsVisitante(int partidaId)
+    {
+        return _tempGolsVisitante.TryGetValue(partidaId, out var val) ? val : null;
+    }
+
+    private void SetTempGolsVisitante(int partidaId, object? val)
+    {
+        if (val == null || string.IsNullOrWhiteSpace(val.ToString()))
+        {
+            _tempGolsVisitante[partidaId] = null;
+        }
+        else if (int.TryParse(val.ToString(), out var result))
+        {
+            _tempGolsVisitante[partidaId] = result >= 0 ? result : 0;
+        }
+    }
+
+    private async Task SalvarResultadoOficial(Partida partida)
+    {
+        var golsCasa = _tempGolsCasa[partida.Id];
+        var golsVisitante = _tempGolsVisitante[partida.Id];
+
+        if (golsCasa == null || golsVisitante == null)
+        {
+            Snackbar.Add("Insira ambos os gols do placar antes de salvar!", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            partida.GolsCasa = golsCasa;
+            partida.GolsVisitante = golsVisitante;
+            partida.Finalizada = true;
+
+            DbContext.Partidas.Update(partida);
+            await DbContext.SaveChangesAsync();
+
+            // Recalcular os pontos de todos os palpites desta partida
+            var palpites = await DbContext.Palpites
+                .Where(p => p.PartidaId == partida.Id)
+                .ToListAsync();
+
+            foreach (var p in palpites)
+            {
+                p.Pontos = CalculatePoints(golsCasa.Value, golsVisitante.Value, p.GolsCasa, p.GolsVisitante);
+                DbContext.Palpites.Update(p);
+            }
+
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add($"Resultado do Jogo #{partida.Numero} registrado. {palpites.Count} palpites recalculados!", Severity.Success);
+            
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao salvar resultado oficial: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private int CalculatePoints(int realCasa, int realVisitante, int guessCasa, int guessVisitante)
+    {
+        // 1. Placar Exato: 5 pontos
+        if (realCasa == guessCasa && realVisitante == guessVisitante)
+        {
+            return 5;
+        }
+
+        // 2. Acertou vencedor ou empate sem placar exato: 3 pontos
+        bool realCasaWins = realCasa > realVisitante;
+        bool realVisitanteWins = realVisitante > realCasa;
+        bool realDraw = realCasa == realVisitante;
+
+        bool guessCasaWins = guessCasa > guessVisitante;
+        bool guessVisitanteWins = guessVisitante > guessCasa;
+        bool guessDraw = guessCasa == guessVisitante;
+
+        if ((realCasaWins && guessCasaWins) || 
+            (realVisitanteWins && guessVisitanteWins) || 
+            (realDraw && guessDraw))
+        {
+            return 3;
+        }
+
+        // 3. Qualquer outro caso: 0 pontos
+        return 0;
+    }
+}

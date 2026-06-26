@@ -1,0 +1,74 @@
+@page "/login"
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Login - Bolão Copa 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudCard Elevation="4" Style="border-radius: 16px; border: 1px solid #e2e8f0;">
+        <MudCardHeader Style="background: linear-gradient(135deg, #1b5e20 0%, #123c15 100%); color: white; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+            <CardHeaderContent>
+                <div class="d-flex flex-column align-center justify-center py-4">
+                    <MudText Typo="Typo.h5" Style="font-weight: bold; font-family: 'Outfit', sans-serif;">🏆 ENTRAR NO BOLÃO</MudText>
+                    <MudText Typo="Typo.body2" Style="opacity: 0.9;">Preencha seus dados para acessar seus bolões</MudText>
+                </div>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent Class="pa-6">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4" Style="border-radius: 8px;">
+                    @ErrorMessage
+                </MudAlert>
+            }
+            @if (ShowRegisteredMessage)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mb-4" Style="border-radius: 8px;">
+                    Cadastro realizado com sucesso! Faça login abaixo.
+                </MudAlert>
+            }
+
+            <form method="post" action="/api/auth/login">
+                <MudTextField T="string" Name="email" Label="E-mail" Variant="Variant.Outlined" Required="true" InputType="InputType.Email" Class="mb-4" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
+                <MudTextField T="string" Name="password" Label="Senha" Variant="Variant.Outlined" Required="true" InputType="InputType.Password" Class="mb-6" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                    Entrar
+                </MudButton>
+            </form>
+        </MudCardContent>
+        <MudCardActions Class="justify-center pb-6">
+            <MudText Typo="Typo.body2">Não tem uma conta? <MudLink Href="/register" Style="font-weight: bold;">Cadastre-se aqui</MudLink></MudText>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Registered { get; set; }
+
+    private string? ErrorMessage => Error switch
+    {
+        "InvalidCredentials" => "E-mail ou senha incorretos. Tente novamente.",
+        _ => null
+    };
+
+    private bool ShowRegisteredMessage => Registered == "true";
+
+    protected override void OnInitialized()
+    {
+        if (Error == "InvalidCredentials")
+        {
+            Snackbar.Add("E-mail ou senha incorretos!", Severity.Error);
+        }
+        else if (Registered == "true")
+        {
+            Snackbar.Add("Conta criada com sucesso!", Severity.Success);
+        }
+    }
+}

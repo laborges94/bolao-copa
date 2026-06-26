@@ -1,0 +1,543 @@
+@page "/bolao/{Id:int}"
+@attribute [Authorize]
+@using Bolao.Models
+@using Bolao.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject BolaoDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_bolao?.Nome ?? "Carregando...") - Bolão Copa 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    @if (_loading)
+    {
+        <div class="d-flex align-center justify-center" style="height: 350px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        </div>
+    }
+    else if (_bolao == null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled">Bolão não encontrado.</MudAlert>
+        <MudButton Href="/meus-boloes" Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">Voltar para Meus Bolões</MudButton>
+    }
+    else if (!_isParticipant)
+    {
+        <!-- Caso o usuário tenha acessado o link direto mas ainda não participa -->
+        <MudCard Elevation="4" Style="border-radius: 16px; max-width: 600px; margin: 50px auto;">
+            <MudCardHeader Style="background: linear-gradient(135deg, #1b5e20 0%, #123c15 100%); color: white; border-top-left-radius: 16px; border-top-right-radius: 16px;" Class="py-6">
+                <CardHeaderContent>
+                    <div class="text-center">
+                        <MudText Typo="Typo.h5" Style="font-weight: bold;">👋 Você foi convidado!</MudText>
+                        <MudText Typo="Typo.body2">Deseja entrar no bolão <strong>@_bolao.Nome</strong>?</MudText>
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="pa-6">
+                <MudText Typo="Typo.body1" Class="mb-4">Para ingressar e começar a palpitar nos 16 confrontos da Copa, defina seu nome de exibição:</MudText>
+                
+                <MudTextField T="string" Label="Seu Nome de Exibição" @bind-Value="_nomeExibicao" HelperText="Como os outros participantes verão seu nome no ranking" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" Class="mb-6" />
+
+                <MudButton OnClick="JoinDirectly" Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.GroupAdd" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                    Confirmar Participação
+                </MudButton>
+            </MudCardContent>
+        </MudCard>
+    }
+    else
+    {
+        <!-- Detalhes do Bolão -->
+        <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-4">
+            <div>
+                <div class="d-flex align-center gap-2">
+                    <MudText Typo="Typo.h4" Style="font-weight: 800; font-family: 'Outfit', sans-serif;">@_bolao.Nome.ToUpper()</MudText>
+                    @if (_bolao.Encerrado)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Encerrado</MudChip>
+                    }
+                </div>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Código de Convite: <strong style="color: #1b5e20;">@_bolao.CodigoConvite</strong>
+                </MudText>
+            </div>
+            <MudButton Href="/meus-boloes" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" Style="border-radius: 8px; font-weight: bold;">
+                Meus Bolões
+            </MudButton>
+        </div>
+
+        <MudTabs Elevation="3" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary">
+            <!-- ABA JOGOS / PALPITES -->
+            <MudTabPanel Text="⚽ Jogos & Palpites" Icon="@Icons.Material.Filled.SportsSoccer">
+                <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">Seus Palpites (16 confrontos)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Você pode salvar seus palpites até o horário de início de cada partida. Palpites salvos são marcados com um check verde.</MudText>
+
+                <MudGrid>
+                    @foreach (var vm in _partidasPalpites)
+                    {
+                        <MudItem xs="12" md="6" lg="4">
+                            <MudCard Elevation="2" Style="border-radius: 12px; height: 100%; border: 1px solid #f1f5f9;">
+                                <MudCardHeader Class="py-3 px-4" Style="background-color: #fafafa; border-bottom: 1px solid #f1f5f9;">
+                                    <CardHeaderContent>
+                                        <div class="d-flex justify-space-between align-center">
+                                            <MudText Typo="Typo.subtitle2" Style="font-weight: bold; color: #1b5e20;">
+                                                Jogo #@vm.Partida.Numero - 16 Avos
+                                            </MudText>
+                                            <div class="d-flex align-center gap-1">
+                                                @if (vm.Partida.Finalizada)
+                                                {
+                                                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Filled">Encerrado</MudChip>
+                                                }
+                                                else if (!vm.CanEdit)
+                                                {
+                                                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">Em Andamento</MudChip>
+                                                }
+                                                else
+                                                {
+                                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">Aberto</MudChip>
+                                                }
+                                            </div>
+                                        </div>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent Class="py-4 px-4 text-center">
+                                    <div class="d-flex align-center justify-center mb-1 text-secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+                                        <MudText Typo="Typo.caption">
+                                            @vm.Partida.DataHora.ToLocalTime().ToString("dd/MM/yyyy HH:mm") (Hora Local)
+                                        </MudText>
+                                    </div>
+
+                                    @if (vm.Partida.Finalizada)
+                                    {
+                                        <div class="d-flex align-center justify-center mb-4 py-1 px-3 border-solid mud-border-success" Style="border-width: 1px; border-radius: 20px; background-color: #f0fdf4; display: inline-flex;">
+                                            <MudText Typo="Typo.caption" Color="Color.Success" Style="font-weight: bold;">
+                                                Resultado Oficial: @vm.Partida.GolsCasa x @vm.Partida.GolsVisitante
+                                            </MudText>
+                                        </div>
+                                    }
+
+                                    <!-- Placar de Palpites -->
+                                    <div class="d-flex align-center justify-center gap-2 my-2">
+                                        <!-- Time Casa -->
+                                        <div style="flex: 1; text-align: right;">
+                                            <MudText Typo="Typo.body1" Style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                @vm.Partida.TimeCasa?.Nome
+                                            </MudText>
+                                            <MudText Typo="Typo.h5" Class="mt-1">@vm.Partida.TimeCasa?.Bandeira</MudText>
+                                        </div>
+
+                                        <!-- Input Placar -->
+                                        <div class="d-flex align-center gap-2 justify-center" style="width: 120px;">
+                                            <input type="number" 
+                                                   value="@vm.TempGolsCasa" 
+                                                   @onchange="@((ChangeEventArgs e) => { vm.TempGolsCasa = ParseInput(e.Value); })"
+                                                   disabled="@(!vm.CanEdit)"
+                                                   class="placar-input" />
+                                            <MudText Typo="Typo.h6">x</MudText>
+                                            <input type="number" 
+                                                   value="@vm.TempGolsVisitante" 
+                                                   @onchange="@((ChangeEventArgs e) => { vm.TempGolsVisitante = ParseInput(e.Value); })"
+                                                   disabled="@(!vm.CanEdit)"
+                                                   class="placar-input" />
+                                        </div>
+
+                                        <!-- Time Visitante -->
+                                        <div style="flex: 1; text-align: left;">
+                                            <MudText Typo="Typo.body1" Style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                @vm.Partida.TimeVisitante?.Nome
+                                            </MudText>
+                                            <MudText Typo="Typo.h5" Class="mt-1">@vm.Partida.TimeVisitante?.Bandeira</MudText>
+                                        </div>
+                                    </div>
+
+                                    @if (vm.HasGuess && vm.Palpite != null)
+                                    {
+                                        <div class="d-flex align-center justify-center gap-1 mt-2 mb-1" style="color: #475569;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
+                                            <MudText Typo="Typo.caption" Style="font-weight: 500;">
+                                                Palpite salvo: @vm.Palpite.GolsCasa x @vm.Palpite.GolsVisitante
+                                            </MudText>
+                                        </div>
+                                        @if (vm.Partida.Finalizada)
+                                        {
+                                            <div class="mt-1">
+                                                <MudChip T="string" Color="@(vm.Palpite.Pontos == 5 ? Color.Success : vm.Palpite.Pontos == 3 ? Color.Info : Color.Default)" Size="Size.Small" Variant="Variant.Filled" Style="font-weight: bold;">
+                                                    @(vm.Palpite.Pontos ?? 0) Pontos Obtidos
+                                                </MudChip>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex align-center justify-center gap-1 mt-2 mb-1 text-warning">
+                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
+                                            <MudText Typo="Typo.caption" Style="font-weight: 500;">Nenhum palpite salvo</MudText>
+                                        </div>
+                                    }
+                                </MudCardContent>
+                                <MudCardActions Class="py-3 px-4 border-top">
+                                    @if (vm.CanEdit)
+                                    {
+                                        <MudButton OnClick="@(() => SalvarPalpite(vm))" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" FullWidth="true" Style="border-radius: 8px;">
+                                            Salvar Palpite
+                                        </MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudButton Variant="Variant.Outlined" Disabled="true" FullWidth="true" Style="border-radius: 8px;">
+                                            Palpites Encerrados
+                                        </MudButton>
+                                    }
+                                </MudCardActions>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudTabPanel>
+
+            <!-- ABA RANKING -->
+            <MudTabPanel Text="🏆 Ranking Geral" Icon="@Icons.Material.Filled.Leaderboard">
+                <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">Tabela de Classificação</MudText>
+                
+                <MudTable Items="_rankingList" Hover="true" Striped="true" Elevation="1" Class="mt-2" Style="border-radius: 12px; overflow: hidden;">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: bold;">Posição</MudTh>
+                        <MudTh Style="font-weight: bold;">Participante</MudTh>
+                        <MudTh Style="font-weight: bold;" Align="Align.Center">Pontos</MudTh>
+                        <MudTh Style="font-weight: bold;" Align="Align.Center">Placares Exatos (5 pts)</MudTh>
+                        <MudTh Style="font-weight: bold;" Align="Align.Center">Vencedores Acertados (3 pts)</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Posição">
+                            <div class="d-flex align-center gap-2">
+                                @if (context.Posicao == 1)
+                                {
+                                    <span style="font-size: 1.25rem;">🥇</span>
+                                }
+                                else if (context.Posicao == 2)
+                                {
+                                    <span style="font-size: 1.25rem;">🥈</span>
+                                }
+                                else if (context.Posicao == 3)
+                                {
+                                    <span style="font-size: 1.25rem;">🥉</span>
+                                }
+                                <strong style="font-size: 1rem;">@(context.Posicao)º</strong>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Participante">
+                            <span style="font-weight: 600;">@context.Nome</span>
+                        </MudTd>
+                        <MudTd DataLabel="Pontos" Align="Align.Center">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" Style="font-weight: bold; font-size: 0.95rem; min-width: 50px;">
+                                @context.Pontos
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Placares Exatos" Align="Align.Center">
+                            <span style="font-weight: bold; color: #1b5e20;">@context.PlacaresExatos</span>
+                        </MudTd>
+                        <MudTd DataLabel="Vencedores Acertados" Align="Align.Center">
+                            <span style="font-weight: bold; color: #0284c7;">@context.VencedoresAcertados</span>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudTabPanel>
+
+            <!-- ABA PARTICIPANTES -->
+            <MudTabPanel Text="👥 Participantes" Icon="@Icons.Material.Filled.Group">
+                <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">Participantes Registrados</MudText>
+                
+                <MudTable Items="_participantes" Hover="true" Elevation="1" Class="mt-2" Style="border-radius: 12px; overflow: hidden;">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: bold;">Nome Exibição</MudTh>
+                        <MudTh Style="font-weight: bold;">E-mail do Usuário</MudTh>
+                        <MudTh Style="font-weight: bold;">Data de Ingresso</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nome Exibição" Style="font-weight: bold;">@context.NomeExibicao</MudTd>
+                        <MudTd DataLabel="E-mail">@context.Usuario?.Email</MudTd>
+                        <MudTd DataLabel="Data de Ingresso">@context.EntrouEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+<style>
+    .placar-input {
+        width: 45px;
+        height: 40px;
+        text-align: center;
+        font-size: 1.15rem;
+        font-weight: bold;
+        border: 2px solid #cbd5e1;
+        border-radius: 8px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .placar-input:focus {
+        border-color: #1b5e20;
+    }
+    .placar-input:disabled {
+        background-color: #f1f5f9;
+        border-color: #e2e8f0;
+        color: #64748b;
+    }
+    /* Chrome, Safari, Edge, Opera */
+    .placar-input::-webkit-outer-spin-button,
+    .placar-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    /* Firefox */
+    .placar-input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Models.Bolao? _bolao;
+    private Participante? _participante;
+    private bool _isParticipant = false;
+    private bool _loading = true;
+    private string _nomeExibicao = string.Empty;
+    private int _userId;
+
+    private List<PartidaPalpiteVm> _partidasPalpites = new();
+    private List<RankingVm> _rankingList = new();
+    private List<Participante> _participantes = new();
+
+    public class PartidaPalpiteVm
+    {
+        public Partida Partida { get; set; } = null!;
+        public Palpite? Palpite { get; set; }
+        public int TempGolsCasa { get; set; }
+        public int TempGolsVisitante { get; set; }
+        public bool HasGuess { get; set; }
+        public bool CanEdit => DateTime.UtcNow < Partida.DataHora && !Partida.Finalizada;
+    }
+
+    public class RankingVm
+    {
+        public int Posicao { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public int Pontos { get; set; }
+        public int PlacaresExatos { get; set; }
+        public int VencedoresAcertados { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (int.TryParse(userIdStr, out var id))
+        {
+            _userId = id;
+            _nomeExibicao = state.User.Identity?.Name ?? "";
+            await LoadData();
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login", true);
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+
+        _bolao = await DbContext.Boloes
+            .Include(b => b.Participantes)
+            .ThenInclude(p => p.Usuario)
+            .FirstOrDefaultAsync(b => b.Id == Id);
+
+        if (_bolao != null)
+        {
+            _participante = _bolao.Participantes.FirstOrDefault(p => p.UsuarioId == _userId);
+            _isParticipant = _participante != null;
+
+            if (_isParticipant && _participante != null)
+            {
+                _participantes = _bolao.Participantes.ToList();
+                await LoadMatchesAndGuesses();
+                await LoadRanking();
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task LoadMatchesAndGuesses()
+    {
+        if (_participante == null) return;
+
+        var list = new List<PartidaPalpiteVm>();
+
+        var partidas = await DbContext.Partidas
+            .Include(p => p.TimeCasa)
+            .Include(p => p.TimeVisitante)
+            .OrderBy(p => p.Numero)
+            .ToListAsync();
+
+        var palpites = await DbContext.Palpites
+            .Where(p => p.ParticipanteId == _participante.Id)
+            .ToDictionaryAsync(p => p.PartidaId);
+
+        foreach (var p in partidas)
+        {
+            palpites.TryGetValue(p.Id, out var guess);
+            list.Add(new PartidaPalpiteVm
+            {
+                Partida = p,
+                Palpite = guess,
+                TempGolsCasa = guess?.GolsCasa ?? 0,
+                TempGolsVisitante = guess?.GolsVisitante ?? 0,
+                HasGuess = guess != null
+            });
+        }
+
+        _partidasPalpites = list;
+    }
+
+    private async Task LoadRanking()
+    {
+        var ranking = new List<RankingVm>();
+
+        var participantes = await DbContext.Participantes
+            .Where(p => p.BolaoId == Id)
+            .ToListAsync();
+
+        var palpites = await DbContext.Palpites
+            .Include(p => p.Partida)
+            .Where(p => p.Participante.BolaoId == Id && p.Partida.Finalizada)
+            .ToListAsync();
+
+        foreach (var p in participantes)
+        {
+            var guesses = palpites.Where(g => g.ParticipanteId == p.Id).ToList();
+            int totalPoints = 0;
+            int exactScores = 0;
+            int correctWinners = 0;
+
+            foreach (var g in guesses)
+            {
+                if (g.Pontos.HasValue)
+                {
+                    totalPoints += g.Pontos.Value;
+                    if (g.Pontos.Value == 5)
+                    {
+                        exactScores++;
+                    }
+                    else if (g.Pontos.Value == 3)
+                    {
+                        correctWinners++;
+                    }
+                }
+            }
+
+            ranking.Add(new RankingVm
+            {
+                Nome = p.NomeExibicao,
+                Pontos = totalPoints,
+                PlacaresExatos = exactScores,
+                VencedoresAcertados = correctWinners
+            });
+        }
+
+        _rankingList = ranking
+            .OrderByDescending(r => r.Pontos)
+            .ThenBy(r => r.Nome)
+            .Select((r, index) => { r.Posicao = index + 1; return r; })
+            .ToList();
+    }
+
+    private int ParseInput(object? val)
+    {
+        if (val == null) return 0;
+        if (int.TryParse(val.ToString(), out var result))
+        {
+            return result >= 0 ? result : 0;
+        }
+        return 0;
+    }
+
+    private async Task SalvarPalpite(PartidaPalpiteVm vm)
+    {
+        if (!vm.CanEdit)
+        {
+            Snackbar.Add("Tempo limite esgotado. Esta partida já começou ou foi finalizada!", Severity.Warning);
+            return;
+        }
+
+        if (_participante == null) return;
+
+        try
+        {
+            if (vm.HasGuess && vm.Palpite != null)
+            {
+                vm.Palpite.GolsCasa = vm.TempGolsCasa;
+                vm.Palpite.GolsVisitante = vm.TempGolsVisitante;
+                DbContext.Palpites.Update(vm.Palpite);
+            }
+            else
+            {
+                var novoPalpite = new Palpite
+                {
+                    PartidaId = vm.Partida.Id,
+                    ParticipanteId = _participante.Id,
+                    GolsCasa = vm.TempGolsCasa,
+                    GolsVisitante = vm.TempGolsVisitante
+                };
+                DbContext.Palpites.Add(novoPalpite);
+                vm.Palpite = novoPalpite;
+                vm.HasGuess = true;
+            }
+
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add($"Palpite salvo para o Jogo #{vm.Partida.Numero}!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao salvar palpite: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task JoinDirectly()
+    {
+        if (string.IsNullOrWhiteSpace(_nomeExibicao))
+        {
+            Snackbar.Add("Digite seu nome de exibição para entrar no bolão!", Severity.Warning);
+            return;
+        }
+
+        if (_bolao == null) return;
+
+        try
+        {
+            var novoParticipante = new Participante
+            {
+                BolaoId = _bolao.Id,
+                UsuarioId = _userId,
+                NomeExibicao = _nomeExibicao.Trim(),
+                EntrouEm = DateTime.UtcNow
+            };
+
+            DbContext.Participantes.Add(novoParticipante);
+            await DbContext.SaveChangesAsync();
+
+            Snackbar.Add($"Você entrou no bolão '{_bolao.Nome}'!", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao participar do bolão: {ex.Message}", Severity.Error);
+        }
+    }
+}

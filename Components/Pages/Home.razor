@@ -1,0 +1,63 @@
+@page "/"
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Início - Bolão Copa 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Class="pa-8 d-flex flex-column align-center justify-center border-solid mud-border-primary" Style="border-width: 2px; border-radius: 16px; background: linear-gradient(135deg, #1b5e20 0%, #123c15 100%); color: white;" Elevation="4">
+        <MudText Typo="Typo.h2" Align="Align.Center" Style="font-weight: 800; font-family: 'Outfit', sans-serif;">🏆 BOLÃO COPA 2026</MudText>
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-2 mb-6" Style="font-weight: 400; opacity: 0.9;">
+            Fase de 16 Avos de Final: 32 seleções, 16 confrontos eletrizantes. Faça seus palpites e mostre que você entende de futebol!
+        </MudText>
+
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-4">Olá, @context.User.Identity?.Name! Pronto para ver seus palpites?</MudText>
+                <MudButton Href="/meus-boloes" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large" StartIcon="@Icons.Material.Filled.SportsSoccer" Style="border-radius: 8px; font-weight: bold; padding: 12px 32px;">
+                    Ir para Meus Bolões
+                </MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <div class="d-flex flex-wrap gap-4 mt-4 justify-center">
+                    <MudButton Href="/login" Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large" Style="border-radius: 8px; font-weight: bold; padding: 12px 32px;">
+                        Fazer Login
+                    </MudButton>
+                    <MudButton Href="/register" Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large" Style="border-radius: 8px; font-weight: bold; padding: 12px 32px; border-color: rgba(255, 255, 255, 0.5);">
+                        Criar uma Conta
+                    </MudButton>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudPaper>
+
+    <MudGrid Class="mt-8">
+        <MudItem xs="12" sm="4">
+            <MudCard Elevation="2" Style="border-radius: 12px; height: 100%;">
+                <MudCardContent Class="d-flex flex-column align-center text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Leaderboard" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                    <MudText Typo="Typo.h6" Style="font-weight: bold;">Ranking Dinâmico</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Acompanhe sua posição e a pontuação detalhada em tempo real após a confirmação de cada resultado oficial.</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudCard Elevation="2" Style="border-radius: 12px; height: 100%;">
+                <MudCardContent Class="d-flex flex-column align-center text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                    <MudText Typo="Typo.h6" Style="font-weight: bold;">Edição Até o Início</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Altere seu palpite a qualquer momento até o horário exato de início de cada partida.</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudCard Elevation="2" Style="border-radius: 12px; height: 100%;">
+                <MudCardContent Class="d-flex flex-column align-center text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Filter5" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                    <MudText Typo="Typo.h6" Style="font-weight: bold;">Regra de Pontos</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Ganhe 5 pontos ao acertar o placar exato e 3 pontos ao acertar o vencedor ou empate.</MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>

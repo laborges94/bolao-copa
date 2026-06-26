@@ -1,0 +1,19 @@
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudNavMenu>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Início</MudNavLink>
+    
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink Href="/meus-boloes" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SportsSoccer">Meus Bolões</MudNavLink>
+            
+            @if (context.User.HasClaim(c => c.Type == "IsAdmin" && c.Value == "True"))
+            {
+                <div class="px-4 py-2">
+                    <MudText Typo="Typo.caption" Style="font-weight: bold; text-transform: uppercase; opacity: 0.6;">Painel Admin</MudText>
+                </div>
+                <MudNavLink Href="/admin" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">Administração</MudNavLink>
+            }
+        </Authorized>
+    </AuthorizeView>
+</MudNavMenu>

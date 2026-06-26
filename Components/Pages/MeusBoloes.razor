@@ -1,0 +1,212 @@
+@page "/meus-boloes"
+@attribute [Authorize]
+@using Bolao.Models
+@using Bolao.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject BolaoDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Meus Bolões - Bolão Copa 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <div class="d-flex align-center justify-space-between mb-6">
+        <div>
+            <MudText Typo="Typo.h4" Style="font-weight: 800; font-family: 'Outfit', sans-serif;">⚽ MEUS BOLÕES</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">Gerencie e participe de grupos de palpites</MudText>
+        </div>
+    </div>
+
+    <MudGrid>
+        <!-- Card para entrar em bolão por código -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="3" Style="border-radius: 12px; height: 100%;">
+                <MudCardHeader Style="background-color: #fafafa; border-bottom: 1px solid #eee;">
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6" Style="font-weight: bold;">🔑 Entrar em um Bolão</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Insira o código enviado pelo organizador</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Class="pa-6">
+                    <MudTextField T="string" Label="Código de Convite" @bind-Value="_codigoConvite" Placeholder="Ex: COPA-1234-ABCD" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.VpnKey" Class="mb-4" />
+                    <MudTextField T="string" Label="Seu Nome de Exibição" @bind-Value="_nomeExibicao" HelperText="Como os outros participantes verão seu nome no ranking" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" Class="mb-6" />
+
+                    <MudButton OnClick="JoinBolao" Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                        Participar
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Listagem de bolões -->
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="3" Style="border-radius: 12px; min-height: 350px;" Class="pa-6">
+                <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">📋 Meus Grupos</MudText>
+
+                @if (_loading)
+                {
+                    <div class="d-flex align-center justify-center" style="height: 250px;">
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                    </div>
+                }
+                else if (_participacoes.Count == 0)
+                {
+                    <div class="d-flex flex-column align-center justify-center text-center gray-text" style="height: 250px; opacity: 0.7;">
+                        <MudIcon Icon="@Icons.Material.Filled.SportsSoccer" Size="Size.Large" Class="mb-2" />
+                        <MudText Typo="Typo.h6" Style="font-weight: bold;">Nenhum bolão ativo</MudText>
+                        <MudText Typo="Typo.body2">Use o formulário ao lado para ingressar em um bolão por código.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <MudGrid>
+                        @foreach (var part in _participacoes)
+                        {
+                            var b = part.Bolao;
+                            if (b == null) continue;
+
+                            <MudItem xs="12" sm="6">
+                                <MudCard Elevation="2" Style="border-radius: 12px; border: 1px solid #f1f5f9; transition: transform 0.2s;" Class="hover-card">
+                                    <MudCardContent>
+                                        <div class="d-flex align-center justify-space-between mb-2">
+                                            <MudText Typo="Typo.h6" Style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@b.Nome</MudText>
+                                            @if (b.Encerrado)
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">Encerrado</MudChip>
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Text">Ativo</MudChip>
+                                            }
+                                        </div>
+                                        
+                                        <MudDivider Class="my-2" />
+                                        
+                                        <div class="d-flex align-center justify-space-between text-secondary mb-1">
+                                            <MudText Typo="Typo.body2"><MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="align-text-bottom mr-1" /> Participantes:</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-weight: bold;">@b.Participantes.Count</MudText>
+                                        </div>
+                                        <div class="d-flex align-center justify-space-between text-secondary mb-1">
+                                            <MudText Typo="Typo.body2"><MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" Class="align-text-bottom mr-1" /> Nome de Exibição:</MudText>
+                                            <MudText Typo="Typo.body2" Style="font-weight: bold; color: #1b5e20;">@part.NomeExibicao</MudText>
+                                        </div>
+                                        <div class="d-flex align-center justify-space-between text-secondary mb-4">
+                                            <MudText Typo="Typo.body2"><MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="align-text-bottom mr-1" /> Ingressou em:</MudText>
+                                            <MudText Typo="Typo.body2">@part.EntrouEm.ToLocalTime().ToString("dd/MM/yyyy")</MudText>
+                                        </div>
+                                        
+                                        <MudButton Href="@($"/bolao/{b.Id}")" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" EndIcon="@Icons.Material.Filled.ArrowForward" Style="border-radius: 8px; font-weight: bold;">
+                                            Acessar Bolão
+                                        </MudButton>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .hover-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+@code {
+    private List<Participante> _participacoes = new();
+    private int _userId;
+    private string _codigoConvite = string.Empty;
+    private string _nomeExibicao = string.Empty;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdStr, out var id))
+        {
+            _userId = id;
+            _nomeExibicao = state.User.Identity?.Name ?? "";
+            await LoadData();
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login", true);
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _participacoes = await DbContext.Participantes
+            .Include(p => p.Bolao)
+            .ThenInclude(b => b.Participantes)
+            .Where(p => p.UsuarioId == _userId)
+            .ToListAsync();
+        _loading = false;
+    }
+
+    private async Task JoinBolao()
+    {
+        if (string.IsNullOrWhiteSpace(_codigoConvite))
+        {
+            Snackbar.Add("Digite o código de convite!", Severity.Warning);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_nomeExibicao))
+        {
+            Snackbar.Add("Digite o seu nome de exibição no bolão!", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var bolao = await DbContext.Boloes
+                .Include(b => b.Participantes)
+                .FirstOrDefaultAsync(b => b.CodigoConvite == _codigoConvite.Trim());
+
+            if (bolao == null)
+            {
+                Snackbar.Add("Código de convite inválido ou bolão inexistente.", Severity.Error);
+                return;
+            }
+
+            if (bolao.Encerrado)
+            {
+                Snackbar.Add("Este bolão já foi encerrado pelo organizador.", Severity.Error);
+                return;
+            }
+
+            var jaParticipa = bolao.Participantes.Any(p => p.UsuarioId == _userId);
+            if (jaParticipa)
+            {
+                Snackbar.Add("Você já está participando deste bolão!", Severity.Warning);
+                return;
+            }
+
+            var novoParticipante = new Participante
+            {
+                BolaoId = bolao.Id,
+                UsuarioId = _userId,
+                NomeExibicao = _nomeExibicao.Trim(),
+                EntrouEm = DateTime.UtcNow
+            };
+
+            DbContext.Participantes.Add(novoParticipante);
+            await DbContext.SaveChangesAsync();
+
+            Snackbar.Add($"Você entrou no bolão '{bolao.Nome}'!", Severity.Success);
+            _codigoConvite = string.Empty;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao entrar no bolão: {ex.Message}", Severity.Error);
+        }
+    }
+}
