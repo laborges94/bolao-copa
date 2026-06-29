@@ -1,5 +1,6 @@
 @page "/admin"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @using Bolao.Models
 @using Bolao.Data
 @using Microsoft.EntityFrameworkCore
@@ -32,7 +33,7 @@
                         <MudCardContent Class="pa-6">
                             <MudTextField T="string" Label="Nome do Bolão" @bind-Value="_novoBolaoNome" Placeholder="Ex: Bolão dos Amigos" Variant="Variant.Outlined" Class="mb-6" />
 
-                            <MudButton OnClick="CriarBolao" Variant="Variant.Filled" Color="Color.Error" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Add" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                            <MudButton OnClick="@CriarBolao" Variant="Variant.Filled" Color="Color.Error" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Add" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
                                 Criar Bolão
                             </MudButton>
                         </MudCardContent>
@@ -178,25 +179,38 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Console.WriteLine("[DEBUG] Admin page: OnInitializedAsync iniciado.");
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (!state.User.Identity.IsAuthenticated)
+        var isAuth = state.User.Identity?.IsAuthenticated ?? false;
+        Console.WriteLine($"[DEBUG] Admin page: IsAuthenticated = {isAuth}, UserName = '{state.User.Identity?.Name}'");
+        
+        if (!isAuth)
         {
+            Console.WriteLine("[DEBUG] Admin page: Usuario nao autenticado. Redirecionando para /login");
             NavigationManager.NavigateTo("/login", true);
             return;
         }
 
         var isAdminClaim = state.User.FindFirst("IsAdmin")?.Value;
+        Console.WriteLine($"[DEBUG] Admin page: IsAdmin claim = '{isAdminClaim}'");
         if (isAdminClaim != "True")
         {
+            Console.WriteLine("[DEBUG] Admin page: Usuario nao e admin. Redirecionando para /");
             NavigationManager.NavigateTo("/", true);
             return;
         }
 
         var userIdStr = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        Console.WriteLine($"[DEBUG] Admin page: NameIdentifier claim = '{userIdStr}'");
         if (int.TryParse(userIdStr, out var id))
         {
             _userId = id;
+            Console.WriteLine($"[DEBUG] Admin page: Carregando dados para UserId = {_userId}");
             await LoadData();
+        }
+        else
+        {
+            Console.WriteLine("[DEBUG] Admin page: Falha ao converter NameIdentifier para int.");
         }
     }
 
@@ -229,8 +243,10 @@
 
     private async Task CriarBolao()
     {
+        Console.WriteLine($"[DEBUG] CriarBolao invocado. Nome do Bolao: '{_novoBolaoNome}', UserId: {_userId}");
         if (string.IsNullOrWhiteSpace(_novoBolaoNome))
         {
+            Console.WriteLine("[DEBUG] CriarBolao abortado: Nome do bolao esta vazio ou nulo.");
             Snackbar.Add("Digite o nome do bolão!", Severity.Warning);
             return;
         }

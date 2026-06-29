@@ -1,5 +1,6 @@
 @page "/bolao/{Id:int}"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @using Bolao.Models
 @using Bolao.Data
 @using Microsoft.EntityFrameworkCore
@@ -40,7 +41,7 @@
                 
                 <MudTextField T="string" Label="Seu Nome de Exibição" @bind-Value="_nomeExibicao" HelperText="Como os outros participantes verão seu nome no ranking" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" Class="mb-6" />
 
-                <MudButton OnClick="JoinDirectly" Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.GroupAdd" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                <MudButton OnClick="@JoinDirectly" Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.GroupAdd" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
                     Confirmar Participação
                 </MudButton>
             </MudCardContent>
