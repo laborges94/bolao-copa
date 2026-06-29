@@ -1,5 +1,6 @@
 @page "/meus-boloes"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @using Bolao.Models
 @using Bolao.Data
 @using Microsoft.EntityFrameworkCore
@@ -33,7 +34,7 @@
                     <MudTextField T="string" Label="Código de Convite" @bind-Value="_codigoConvite" Placeholder="Ex: COPA-1234-ABCD" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.VpnKey" Class="mb-4" />
                     <MudTextField T="string" Label="Seu Nome de Exibição" @bind-Value="_nomeExibicao" HelperText="Como os outros participantes verão seu nome no ranking" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" Class="mb-6" />
 
-                    <MudButton OnClick="JoinBolao" Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
+                    <MudButton OnClick="@JoinBolao" Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" Size="Size.Large" StartIcon="@Icons.Material.Filled.Login" Style="border-radius: 8px; font-weight: bold; padding: 12px 0;">
                         Participar
                     </MudButton>
                 </MudCardContent>
