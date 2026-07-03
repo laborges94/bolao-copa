@@ -40,8 +40,7 @@ jobs:
     - name: Compilar projeto (Build)
       run: dotnet build Bolao.slnx --configuration Release --no-restore
 
-    # 5. Executar os testes automatizados da solução.
-    # OBSERVAÇÃO: Esta etapa está comentada porque atualmente a solução possui apenas o projeto web e nenhum projeto de teste.
-    # Assim que você criar um projeto de testes (ex: xUnit, NUnit ou MSTest) e vinculá-lo à solução, basta remover os símbolos de '#' abaixo.
-    # - name: Executar testes automatizados
-    #   run: dotnet test Bolao.slnx --configuration Release --no-restore --no-build --verbosity normal
+    # 5. Executar os testes automatizados da solução
+    - name: Executar testes automatizados
+      run: dotnet test Bolao.slnx --configuration Release --no-restore --no-build --verbosity normal
+

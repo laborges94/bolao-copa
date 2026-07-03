@@ -1,3 +1,7 @@
 <Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/Bolao.Tests/Bolao.Tests.csproj" />
+  </Folder>
   <Project Path="src/Bolao/Bolao.csproj" />
 </Solution>
