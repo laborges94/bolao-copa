@@ -1,0 +1,47 @@
+# Nome do Workflow de Integração Contínua (CI) no GitHub Actions
+name: .NET CI
+
+# Define os gatilhos (triggers) que iniciam a execução do workflow
+on:
+  # Dispara o workflow sempre que houver um envio (push) para as ramificações principais
+  push:
+    branches: [ "main", "master", "develop" ]
+  # Dispara o workflow sempre que uma solicitação de alteração (pull request) for aberta ou atualizada para as ramificações principais
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+# Permissões mínimas recomendadas para segurança
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Compilar e Testar (.NET 10)
+    # Executa o processo em uma máquina virtual Linux atualizada (rápida e eficiente)
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Faz o download do código do repositório para o ambiente virtual do GitHub Actions
+    - name: Checkout do código
+      uses: actions/checkout@v4
+
+    # 2. Instala e configura o SDK do .NET com base na versão usada no projeto (neste caso, .NET 10.0)
+    - name: Configurar o .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x' # Busca a versão mais recente do canal .NET 10.0
+
+    # 3. Restaura os pacotes NuGet declarados nos arquivos do projeto
+    - name: Restaurar dependências
+      run: dotnet restore Bolao.slnx
+
+    # 4. Compila a solução inteira no modo Release (otimizado).
+    # O parâmetro --no-restore evita que ele tente restaurar os pacotes novamente, economizando tempo.
+    - name: Compilar projeto (Build)
+      run: dotnet build Bolao.slnx --configuration Release --no-restore
+
+    # 5. Executar os testes automatizados da solução.
+    # OBSERVAÇÃO: Esta etapa está comentada porque atualmente a solução possui apenas o projeto web e nenhum projeto de teste.
+    # Assim que você criar um projeto de testes (ex: xUnit, NUnit ou MSTest) e vinculá-lo à solução, basta remover os símbolos de '#' abaixo.
+    # - name: Executar testes automatizados
+    #   run: dotnet test Bolao.slnx --configuration Release --no-restore --no-build --verbosity normal
