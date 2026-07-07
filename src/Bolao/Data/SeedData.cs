@@ -21,6 +21,20 @@ namespace Bolao.Data
                 context.Database.EnsureCreated();
             }
 
+            // 1. Create Default Admin User (Independent of other data seeds)
+            if (!context.Usuarios.Any(u => u.Email == "admin@bolao.com"))
+            {
+                var admin = new Usuario
+                {
+                    Nome = "Administrador",
+                    Email = "admin@bolao.com",
+                    Senha = PasswordHasher.Hash("admin123"),
+                    IsAdmin = true
+                };
+                context.Usuarios.Add(admin);
+                context.SaveChanges();
+            }
+
             // Check if Fase "16 avos de final" is already seeded
             if (context.Fases.Any(f => f.Nome == "16 avos de final"))
             {
@@ -97,18 +111,7 @@ namespace Bolao.Data
             }
             context.Partidas.AddRange(partidas);
 
-            // 4. Create Default Admin User
-            if (!context.Usuarios.Any(u => u.Email == "admin@bolao.com"))
-            {
-                var admin = new Usuario
-                {
-                    Nome = "Administrador",
-                    Email = "admin@bolao.com",
-                    Senha = PasswordHasher.Hash("admin123"),
-                    IsAdmin = true
-                };
-                context.Usuarios.Add(admin);
-            }
+
 
             context.SaveChanges();
         }

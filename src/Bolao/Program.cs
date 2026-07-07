@@ -78,7 +78,7 @@ app.UseAntiforgery();
 // Minimal API auth endpoints
 app.MapPost("/api/auth/login", async (HttpContext context, BolaoDbContext dbContext) =>
 {
-    var email = context.Request.Form["email"].ToString();
+    var email = context.Request.Form["email"].ToString().Trim().ToLower();
     var password = context.Request.Form["password"].ToString();
 
     var hashedPassword = PasswordHasher.Hash(password);
