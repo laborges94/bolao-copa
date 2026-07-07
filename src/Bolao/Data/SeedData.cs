@@ -11,8 +11,15 @@ namespace Bolao.Data
     {
         public static void Initialize(BolaoDbContext context)
         {
-            // Apply any pending migrations automatically (or ensure database is created)
-            context.Database.Migrate();
+            // Apply migrations for SQLite local development, or ensure schema is created for PostgreSQL
+            if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                context.Database.Migrate();
+            }
+            else
+            {
+                context.Database.EnsureCreated();
+            }
 
             // Check if Fase "16 avos de final" is already seeded
             if (context.Fases.Any(f => f.Nome == "16 avos de final"))

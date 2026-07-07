@@ -15,9 +15,23 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddMudServices();
 
-// Configure SQLite DbContext
+// Configure DbContext (supports PostgreSQL in production/Render and SQLite in dev/local)
+var databaseUrl = builder.Configuration.GetConnectionString("DefaultConnection") 
+                  ?? builder.Configuration["DATABASE_URL"]
+                  ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
 builder.Services.AddDbContext<BolaoDbContext>(options =>
-    options.UseSqlite("Data Source=bolao.db"));
+{
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        var connectionString = ConnectionStringParser.Parse(databaseUrl);
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        options.UseSqlite("Data Source=bolao.db");
+    }
+});
 
 // Configure Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
