@@ -1,6 +1,9 @@
 @page "/"
+@using Bolao.Data
+@using Microsoft.EntityFrameworkCore
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject BolaoDbContext DbContext
 
 <PageTitle>Início - Bolão Copa 2026</PageTitle>
 
@@ -8,7 +11,7 @@
     <MudPaper Class="pa-8 d-flex flex-column align-center justify-center border-solid mud-border-primary" Style="border-width: 2px; border-radius: 16px; background: linear-gradient(135deg, #1b5e20 0%, #123c15 100%); color: white;" Elevation="4">
         <MudText Typo="Typo.h2" Align="Align.Center" Style="font-weight: 800; font-family: 'Outfit', sans-serif;">🏆 BOLÃO COPA 2026</MudText>
         <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-2 mb-6" Style="font-weight: 400; opacity: 0.9;">
-            Fase de 16 Avos de Final: 32 seleções, 16 confrontos eletrizantes. Faça seus palpites e mostre que você entende de futebol!
+            Fase de @_faseNome: @_selecoesCount seleções, @_confrontosCount confrontos eletrizantes. Faça seus palpites e mostre que você entende de futebol!
         </MudText>
 
         <AuthorizeView>
@@ -61,3 +64,27 @@
         </MudItem>
     </MudGrid>
 </MudContainer>
+
+@code {
+    private string _faseNome = "Quartas de Final";
+    private int _selecoesCount = 8;
+    private int _confrontosCount = 4;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var fase = await DbContext.Fases.OrderBy(f => f.Ordem).FirstOrDefaultAsync();
+            if (fase != null)
+            {
+                _faseNome = fase.Nome;
+                _selecoesCount = await DbContext.Selecoes.CountAsync();
+                _confrontosCount = await DbContext.Partidas.CountAsync();
+            }
+        }
+        catch
+        {
+            // Fallback to defaults if DB is not seeded or loaded yet
+        }
+    }
+}

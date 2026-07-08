@@ -83,7 +83,7 @@
                                     <CardHeaderContent>
                                         <div class="d-flex justify-space-between align-center">
                                             <MudText Typo="Typo.subtitle2" Style="font-weight: bold; color: #1b5e20;">
-                                                Jogo #@vm.Partida.Numero - 16 Avos
+                                                Jogo #@vm.Partida.Numero - @(vm.Partida.Fase?.Nome ?? "Partida")
                                             </MudText>
                                             <div class="d-flex align-center gap-1">
                                                 @if (vm.Partida.Finalizada)
@@ -384,6 +384,7 @@
         var partidas = await DbContext.Partidas
             .Include(p => p.TimeCasa)
             .Include(p => p.TimeVisitante)
+            .Include(p => p.Fase)
             .OrderBy(p => p.Numero)
             .ToListAsync();
 

@@ -1,6 +1,6 @@
 # Bolão da Copa
 
-Este é um sistema simples de bolão para a Copa do Mundo, focado na fase de **16 avos de final** (32 seleções, 16 partidas).
+Este é um sistema simples de bolão para a Copa do Mundo, focado na fase de **Quartas de Final** (8 seleções, 4 partidas).
 
 A aplicação foi desenvolvida em **ASP.NET Core 10 Blazor Server** utilizando a biblioteca de componentes **MudBlazor** e banco de dados local **SQLite** com **Entity Framework Core**.
 

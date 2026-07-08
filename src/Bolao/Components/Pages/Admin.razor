@@ -79,7 +79,7 @@
 
         <!-- ABA LANÇAR RESULTADOS -->
         <MudTabPanel Text="⚽ Lançar Resultados" Icon="@Icons.Material.Filled.SportsSoccer">
-            <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-2">📋 Lista de Partidas - 16 Avos de Final</MudText>
+            <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-2">📋 Lista de Partidas - @_faseNome</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Insira o resultado oficial dos confrontos para recalcular automaticamente os pontos de todos os palpites dos usuários.</MudText>
 
             <MudTable Items="_partidas" Hover="true" Striped="true" Elevation="1" Style="border-radius: 12px; overflow: hidden;">
@@ -176,6 +176,7 @@
     private List<Partida> _partidas = new();
     private Dictionary<int, int?> _tempGolsCasa = new();
     private Dictionary<int, int?> _tempGolsVisitante = new();
+    private string _faseNome = "Partidas";
 
     protected override async Task OnInitializedAsync()
     {
@@ -223,8 +224,11 @@
         _partidas = await DbContext.Partidas
             .Include(p => p.TimeCasa)
             .Include(p => p.TimeVisitante)
+            .Include(p => p.Fase)
             .OrderBy(p => p.Numero)
             .ToListAsync();
+
+        _faseNome = _partidas.FirstOrDefault()?.Fase?.Nome ?? "Partidas";
 
         foreach (var p in _partidas)
         {

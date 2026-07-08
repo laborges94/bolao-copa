@@ -21,98 +21,121 @@ namespace Bolao.Data
                 context.Database.EnsureCreated();
             }
 
-            // 1. Create Default Admin User (Independent of other data seeds)
-            if (!context.Usuarios.Any(u => u.Email == "admin@bolao.com"))
+            // Check if Fase "Quartas de final" is already seeded
+            if (context.Fases.Any(f => f.Nome == "Quartas de final"))
             {
-                var admin = new Usuario
-                {
-                    Nome = "Administrador",
-                    Email = "admin@bolao.com",
-                    Senha = PasswordHasher.Hash("admin123"),
-                    IsAdmin = true
-                };
-                context.Usuarios.Add(admin);
-                context.SaveChanges();
-            }
-
-            // Check if Fase "16 avos de final" is already seeded
-            if (context.Fases.Any(f => f.Nome == "16 avos de final"))
-            {
+                // Ensure admin exists with the stronger password even if already seeded
+                EnsureAdminUser(context);
                 return; // Already seeded
             }
 
-            // 1. Create Fase
+            // 1. Clear database tables to ensure a clean environment
+            context.Palpites.RemoveRange(context.Palpites);
+            context.Partidas.RemoveRange(context.Partidas);
+            context.Fases.RemoveRange(context.Fases);
+            context.Selecoes.RemoveRange(context.Selecoes);
+            context.Participantes.RemoveRange(context.Participantes);
+            context.Boloes.RemoveRange(context.Boloes);
+            context.Usuarios.RemoveRange(context.Usuarios);
+            context.SaveChanges();
+
+            // 2. Create Default Admin User with stronger password
+            EnsureAdminUser(context);
+
+            // 3. Create Fase "Quartas de final"
             var fase = new Fase
             {
-                Nome = "16 avos de final",
-                Ordem = 1
+                Nome = "Quartas de final",
+                Ordem = 2
             };
             context.Fases.Add(fase);
             context.SaveChanges(); // Persist to get ID
 
-            // 2. Create 32 Selecoes
+            // 4. Create 8 Selecoes (with Switzerland as the missing one)
             var selecoes = new List<Selecao>
             {
-                new() { Nome = "Brasil", Sigla = "BRA", Bandeira = "🇧🇷" },
-                new() { Nome = "Argentina", Sigla = "ARG", Bandeira = "🇦🇷" },
                 new() { Nome = "França", Sigla = "FRA", Bandeira = "🇫🇷" },
-                new() { Nome = "Alemanha", Sigla = "GER", Bandeira = "🇩🇪" },
-                new() { Nome = "Espanha", Sigla = "ESP", Bandeira = "🇪🇸" },
-                new() { Nome = "Inglaterra", Sigla = "ENG", Bandeira = "🏴" },
-                new() { Nome = "Itália", Sigla = "ITA", Bandeira = "🇮🇹" },
-                new() { Nome = "Uruguai", Sigla = "URU", Bandeira = "🇺🇾" },
-                new() { Nome = "Holanda", Sigla = "NED", Bandeira = "🇳🇱" },
-                new() { Nome = "Bélgica", Sigla = "BEL", Bandeira = "🇧🇪" },
-                new() { Nome = "Portugal", Sigla = "POR", Bandeira = "🇵🇹" },
-                new() { Nome = "Croácia", Sigla = "CRO", Bandeira = "🇭🇷" },
-                new() { Nome = "Senegal", Sigla = "SEN", Bandeira = "🇸🇳" },
-                new() { Nome = "Japão", Sigla = "JPN", Bandeira = "🇯🇵" },
                 new() { Nome = "Marrocos", Sigla = "MAR", Bandeira = "🇲🇦" },
-                new() { Nome = "Estados Unidos", Sigla = "USA", Bandeira = "🇺🇸" },
-                new() { Nome = "México", Sigla = "MEX", Bandeira = "🇲🇽" },
-                new() { Nome = "Canadá", Sigla = "CAN", Bandeira = "🇨🇦" },
-                new() { Nome = "Suíça", Sigla = "SUI", Bandeira = "🇨🇭" },
-                new() { Nome = "Dinamarca", Sigla = "DEN", Bandeira = "🇩🇰" },
-                new() { Nome = "Polônia", Sigla = "POL", Bandeira = "🇵🇱" },
-                new() { Nome = "Suécia", Sigla = "SWE", Bandeira = "🇸🇪" },
-                new() { Nome = "Colômbia", Sigla = "COL", Bandeira = "🇨🇴" },
-                new() { Nome = "Chile", Sigla = "CHI", Bandeira = "🇨🇱" },
-                new() { Nome = "Equador", Sigla = "ECU", Bandeira = "🇪🇨" },
-                new() { Nome = "Coreia do Sul", Sigla = "KOR", Bandeira = "🇰🇷" },
-                new() { Nome = "Camarões", Sigla = "CMR", Bandeira = "🇨🇲" },
-                new() { Nome = "Gana", Sigla = "GHA", Bandeira = "🇬🇭" },
-                new() { Nome = "Tunísia", Sigla = "TUN", Bandeira = "🇹🇳" },
-                new() { Nome = "Arábia Saudita", Sigla = "KSA", Bandeira = "🇸🇦" },
-                new() { Nome = "Austrália", Sigla = "AUS", Bandeira = "🇦🇺" },
-                new() { Nome = "Irã", Sigla = "IRN", Bandeira = "🇮🇷" }
+                new() { Nome = "Espanha", Sigla = "ESP", Bandeira = "🇪🇸" },
+                new() { Nome = "Bélgica", Sigla = "BEL", Bandeira = "🇧🇪" },
+                new() { Nome = "Noruega", Sigla = "NOR", Bandeira = "🇳🇴" },
+                new() { Nome = "Inglaterra", Sigla = "ENG", Bandeira = "🏴" },
+                new() { Nome = "Argentina", Sigla = "ARG", Bandeira = "🇦🇷" },
+                new() { Nome = "Suíça", Sigla = "SUI", Bandeira = "🇨🇭" }
             };
             context.Selecoes.AddRange(selecoes);
             context.SaveChanges(); // Get IDs
 
-            // 3. Create 16 Matches (Partidas)
-            // Schedule matches in the future (e.g., starting tomorrow 10 AM, spaced 4 hours)
-            var baseDate = DateTime.Today.AddDays(1).AddHours(10);
-            var partidas = new List<Partida>();
+            // Helper to get Selecao by Sigla
+            var getSelecao = new Func<string, Selecao>(sigla => selecoes.First(s => s.Sigla == sigla));
 
-            for (int i = 0; i < 16; i++)
+            // 5. Create 4 Quarterfinal Matches
+            // França x Marrocos (09/07/2026 17:00 local -> 20:00 UTC)
+            // Espanha x Bélgica (10/07/2026 16:00 local -> 19:00 UTC)
+            // Noruega x Inglaterra (11/07/2026 18:00 local -> 21:00 UTC)
+            // Argentina x Suíça (11/07/2026 22:00 local -> 12/07/2026 01:00 UTC)
+            var partidas = new List<Partida>
             {
-                var timeCasa = selecoes[i * 2];
-                var timeVisitante = selecoes[i * 2 + 1];
-
-                partidas.Add(new Partida
+                new()
                 {
-                    Numero = i + 1,
-                    DataHora = baseDate.AddDays(i / 2).AddHours((i % 2) * 4), // 2 matches per day (10:00, 14:00)
-                    TimeCasaId = timeCasa.Id,
-                    TimeVisitanteId = timeVisitante.Id,
+                    Numero = 1,
+                    DataHora = new DateTime(2026, 7, 9, 20, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = getSelecao("FRA").Id,
+                    TimeVisitanteId = getSelecao("MAR").Id,
                     FaseId = fase.Id,
                     Finalizada = false
-                });
-            }
+                },
+                new()
+                {
+                    Numero = 2,
+                    DataHora = new DateTime(2026, 7, 10, 19, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = getSelecao("ESP").Id,
+                    TimeVisitanteId = getSelecao("BEL").Id,
+                    FaseId = fase.Id,
+                    Finalizada = false
+                },
+                new()
+                {
+                    Numero = 3,
+                    DataHora = new DateTime(2026, 7, 11, 21, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = getSelecao("NOR").Id,
+                    TimeVisitanteId = getSelecao("ENG").Id,
+                    FaseId = fase.Id,
+                    Finalizada = false
+                },
+                new()
+                {
+                    Numero = 4,
+                    DataHora = new DateTime(2026, 7, 12, 1, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = getSelecao("ARG").Id,
+                    TimeVisitanteId = getSelecao("SUI").Id,
+                    FaseId = fase.Id,
+                    Finalizada = false
+                }
+            };
             context.Partidas.AddRange(partidas);
+            context.SaveChanges();
+        }
 
-
-
+        private static void EnsureAdminUser(BolaoDbContext context)
+        {
+            var admin = context.Usuarios.FirstOrDefault(u => u.Email == "admin@bolao.com");
+            if (admin == null)
+            {
+                admin = new Usuario
+                {
+                    Nome = "Administrador",
+                    Email = "admin@bolao.com",
+                    Senha = PasswordHasher.Hash("AdminBolao2026!"),
+                    IsAdmin = true
+                };
+                context.Usuarios.Add(admin);
+            }
+            else
+            {
+                admin.Senha = PasswordHasher.Hash("AdminBolao2026!");
+                context.Entry(admin).State = EntityState.Modified;
+            }
             context.SaveChanges();
         }
     }
