@@ -106,7 +106,7 @@
                                     <div class="d-flex align-center justify-center mb-1 text-secondary">
                                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
                                         <MudText Typo="Typo.caption">
-                                            @vm.Partida.DataHora.ToLocalTime().ToString("dd/MM/yyyy HH:mm") (Hora Local)
+                                            @vm.Partida.DataHora.ToBrasiliaTime().ToString("dd/MM/yyyy HH:mm") (Horário de Brasília)
                                         </MudText>
                                     </div>
 
@@ -255,11 +255,38 @@
                         <MudTh Style="font-weight: bold;">Nome Exibição</MudTh>
                         <MudTh Style="font-weight: bold;">E-mail do Usuário</MudTh>
                         <MudTh Style="font-weight: bold;">Data de Ingresso</MudTh>
+                        @if (_isAdmin)
+                        {
+                            <MudTh Style="font-weight: bold;">Palpites Registrados</MudTh>
+                        }
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Nome Exibição" Style="font-weight: bold;">@context.NomeExibicao</MudTd>
                         <MudTd DataLabel="E-mail">@context.Usuario?.Email</MudTd>
-                        <MudTd DataLabel="Data de Ingresso">@context.EntrouEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+                        <MudTd DataLabel="Data de Ingresso">@context.EntrouEm.ToBrasiliaTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+                        @if (_isAdmin)
+                        {
+                            <MudTd DataLabel="Palpites Registrados">
+                                @{
+                                    var participantPalpites = GetPalpitesDoParticipante(context.Id);
+                                }
+                                @if (participantPalpites.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var p in participantPalpites)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default" Style="font-size: 0.75rem;">
+                                                @p.Partida?.TimeCasa?.Sigla @p.GolsCasa x @p.GolsVisitante @p.Partida?.TimeVisitante?.Sigla
+                                            </MudChip>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span style="color: gray; font-style: italic; font-size: 0.85rem;">Nenhum palpite</span>
+                                }
+                            </MudTd>
+                        }
                     </RowTemplate>
                 </MudTable>
             </MudTabPanel>
@@ -309,10 +336,12 @@
     private bool _loading = true;
     private string _nomeExibicao = string.Empty;
     private int _userId;
+    private bool _isAdmin = false;
 
     private List<PartidaPalpiteVm> _partidasPalpites = new();
     private List<RankingVm> _rankingList = new();
     private List<Participante> _participantes = new();
+    private List<Palpite> _allPalpites = new();
 
     public class PartidaPalpiteVm
     {
@@ -337,6 +366,8 @@
     {
         var state = await AuthStateProvider.GetAuthenticationStateAsync();
         var userIdStr = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        _isAdmin = state.User.FindFirst("IsAdmin")?.Value == "True";
         
         if (int.TryParse(userIdStr, out var id))
         {
@@ -369,6 +400,7 @@
                 _participantes = _bolao.Participantes.ToList();
                 await LoadMatchesAndGuesses();
                 await LoadRanking();
+                await LoadAllPalpitesForAdmin();
             }
         }
 
@@ -541,5 +573,22 @@
         {
             Snackbar.Add($"Erro ao participar do bolão: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task LoadAllPalpitesForAdmin()
+    {
+        if (!_isAdmin) return;
+
+        _allPalpites = await DbContext.Palpites
+            .Include(p => p.Partida)
+            .ThenInclude(partida => partida.TimeCasa)
+            .Include(p => p.Partida.TimeVisitante)
+            .Where(p => p.Participante.BolaoId == Id)
+            .ToListAsync();
+    }
+
+    private List<Palpite> GetPalpitesDoParticipante(int participanteId)
+    {
+        return _allPalpites.Where(p => p.ParticipanteId == participanteId).OrderBy(p => p.Partida.Numero).ToList();
     }
 }

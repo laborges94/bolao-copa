@@ -94,7 +94,7 @@
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Jogo" Style="font-weight: bold;">#@context.Numero</MudTd>
-                    <MudTd DataLabel="Data & Hora">@context.DataHora.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+                    <MudTd DataLabel="Data & Hora">@context.DataHora.ToBrasiliaTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
                     <MudTd DataLabel="Time Casa" Style="text-align: right;">
                         <span style="font-weight: 600;" Class="mr-2">@context.TimeCasa?.Nome</span>
                         <span style="font-size: 1.25rem;">@context.TimeCasa?.Bandeira</span>
@@ -127,9 +127,17 @@
                         }
                     </MudTd>
                     <MudTd>
-                        <MudButton OnClick="@(() => SalvarResultadoOficial(context))" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Save" Style="border-radius: 6px; font-weight: bold;">
-                            Salvar
-                        </MudButton>
+                        <div class="d-flex gap-2">
+                            <MudButton OnClick="@(() => SalvarResultadoOficial(context))" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Save" Style="border-radius: 6px; font-weight: bold;">
+                                Salvar
+                            </MudButton>
+                            @if (context.Finalizada)
+                            {
+                                <MudButton OnClick="@(() => ReabrirPartida(context))" Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" StartIcon="@Icons.Material.Filled.LockOpen" Style="border-radius: 6px; font-weight: bold;">
+                                    Reabrir
+                                </MudButton>
+                            }
+                        </div>
                     </MudTd>
                 </RowTemplate>
             </MudTable>
@@ -387,6 +395,43 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Erro ao salvar resultado oficial: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ReabrirPartida(Partida partida)
+    {
+        try
+        {
+            partida.GolsCasa = null;
+            partida.GolsVisitante = null;
+            partida.Finalizada = false;
+
+            DbContext.Partidas.Update(partida);
+            await DbContext.SaveChangesAsync();
+
+            // Resetar os pontos de todos os palpites desta partida
+            var palpites = await DbContext.Palpites
+                .Where(p => p.PartidaId == partida.Id)
+                .ToListAsync();
+
+            foreach (var p in palpites)
+            {
+                p.Pontos = null;
+                DbContext.Palpites.Update(p);
+            }
+
+            await DbContext.SaveChangesAsync();
+
+            _tempGolsCasa[partida.Id] = null;
+            _tempGolsVisitante[partida.Id] = null;
+
+            Snackbar.Add($"Partida #{partida.Numero} reaberta e palpites recalculados/resetados!", Severity.Info);
+            
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao reabrir partida: {ex.Message}", Severity.Error);
         }
     }
 
