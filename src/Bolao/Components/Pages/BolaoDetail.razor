@@ -37,7 +37,7 @@
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent Class="pa-6">
-                <MudText Typo="Typo.body1" Class="mb-4">Para ingressar e começar a palpitar nos 16 confrontos da Copa, defina seu nome de exibição:</MudText>
+                <MudText Typo="Typo.body1" Class="mb-4">Para ingressar e começar a palpitar nos @_totalPartidas confrontos da Copa, defina seu nome de exibição:</MudText>
                 
                 <MudTextField T="string" Label="Seu Nome de Exibição" @bind-Value="_nomeExibicao" HelperText="Como os outros participantes verão seu nome no ranking" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" Class="mb-6" />
 
@@ -71,7 +71,7 @@
         <MudTabs Elevation="3" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary">
             <!-- ABA JOGOS / PALPITES -->
             <MudTabPanel Text="⚽ Jogos & Palpites" Icon="@Icons.Material.Filled.SportsSoccer">
-                <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">Seus Palpites (16 confrontos)</MudText>
+                <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-4">Seus Palpites (@_totalPartidas confrontos)</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Você pode salvar seus palpites até o horário de início de cada partida. Palpites salvos são marcados com um check verde.</MudText>
 
                 <MudGrid>
@@ -342,6 +342,7 @@
     private List<RankingVm> _rankingList = new();
     private List<Participante> _participantes = new();
     private List<Palpite> _allPalpites = new();
+    private int _totalPartidas = 0;
 
     public class PartidaPalpiteVm
     {
@@ -394,6 +395,8 @@
         {
             _participante = _bolao.Participantes.FirstOrDefault(p => p.UsuarioId == _userId);
             _isParticipant = _participante != null;
+
+            _totalPartidas = await DbContext.Partidas.CountAsync();
 
             if (_isParticipant && _participante != null)
             {

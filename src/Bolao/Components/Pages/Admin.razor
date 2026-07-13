@@ -79,12 +79,12 @@
 
         <!-- ABA LANÇAR RESULTADOS -->
         <MudTabPanel Text="⚽ Lançar Resultados" Icon="@Icons.Material.Filled.SportsSoccer">
-            <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-2">📋 Lista de Partidas - @_faseNome</MudText>
+            <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mb-2">📋 Lista de Partidas</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Insira o resultado oficial dos confrontos para recalcular automaticamente os pontos de todos os palpites dos usuários.</MudText>
 
             <MudTable Items="_partidas" Hover="true" Striped="true" Elevation="1" Style="border-radius: 12px; overflow: hidden;">
                 <HeaderContent>
-                    <MudTh Style="font-weight: bold; width: 80px;">Jogo</MudTh>
+                    <MudTh Style="font-weight: bold; width: 100px;">Jogo</MudTh>
                     <MudTh Style="font-weight: bold;">Data & Hora</MudTh>
                     <MudTh Style="font-weight: bold; text-align: right; width: 250px;">Time Casa</MudTh>
                     <MudTh Style="font-weight: bold; text-align: center; width: 180px;">Placar Oficial</MudTh>
@@ -93,7 +93,12 @@
                     <MudTh Style="font-weight: bold; width: 120px;"></MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Jogo" Style="font-weight: bold;">#@context.Numero</MudTd>
+                    <MudTd DataLabel="Jogo" Style="font-weight: bold;">
+                        #@context.Numero
+                        <div style="font-size: 0.75rem; font-weight: normal; color: gray;">
+                            @(context.Fase?.Nome ?? "Partida")
+                        </div>
+                    </MudTd>
                     <MudTd DataLabel="Data & Hora">@context.DataHora.ToBrasiliaTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
                     <MudTd DataLabel="Time Casa" Style="text-align: right;">
                         <span style="font-weight: 600;" Class="mr-2">@context.TimeCasa?.Nome</span>

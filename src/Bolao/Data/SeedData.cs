@@ -26,6 +26,7 @@ namespace Bolao.Data
             {
                 // Ensure admin exists with the stronger password even if already seeded
                 EnsureAdminUser(context);
+                EnsureSemifinalSeeded(context);
                 return; // Already seeded
             }
 
@@ -115,6 +116,8 @@ namespace Bolao.Data
             };
             context.Partidas.AddRange(partidas);
             context.SaveChanges();
+
+            EnsureSemifinalSeeded(context);
         }
 
         private static void EnsureAdminUser(BolaoDbContext context)
@@ -136,6 +139,58 @@ namespace Bolao.Data
                 admin.Senha = PasswordHasher.Hash("AdminBolao2026!");
                 context.Entry(admin).State = EntityState.Modified;
             }
+            context.SaveChanges();
+        }
+
+        private static void EnsureSemifinalSeeded(BolaoDbContext context)
+        {
+            // Check if Fase "Semifinal" is already seeded
+            var faseSemifinal = context.Fases.FirstOrDefault(f => f.Nome == "Semifinal");
+            if (faseSemifinal == null)
+            {
+                faseSemifinal = new Fase
+                {
+                    Nome = "Semifinal",
+                    Ordem = 3
+                };
+                context.Fases.Add(faseSemifinal);
+                context.SaveChanges();
+            }
+
+            // Ensure the two matches for Semifinal exist
+            // Match 5: França vs Espanha (14/07 16:00 local -> 19:00 UTC)
+            // Match 6: Inglaterra vs Argentina (15/07 16:00 local -> 19:00 UTC)
+            var teamFra = context.Selecoes.FirstOrDefault(s => s.Sigla == "FRA");
+            var teamEsp = context.Selecoes.FirstOrDefault(s => s.Sigla == "ESP");
+            var teamEng = context.Selecoes.FirstOrDefault(s => s.Sigla == "ENG");
+            var teamArg = context.Selecoes.FirstOrDefault(s => s.Sigla == "ARG");
+
+            if (teamFra != null && teamEsp != null && !context.Partidas.Any(p => p.Numero == 5))
+            {
+                context.Partidas.Add(new Partida
+                {
+                    Numero = 5,
+                    DataHora = new DateTime(2026, 7, 14, 19, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = teamFra.Id,
+                    TimeVisitanteId = teamEsp.Id,
+                    FaseId = faseSemifinal.Id,
+                    Finalizada = false
+                });
+            }
+
+            if (teamEng != null && teamArg != null && !context.Partidas.Any(p => p.Numero == 6))
+            {
+                context.Partidas.Add(new Partida
+                {
+                    Numero = 6,
+                    DataHora = new DateTime(2026, 7, 15, 19, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = teamEng.Id,
+                    TimeVisitanteId = teamArg.Id,
+                    FaseId = faseSemifinal.Id,
+                    Finalizada = false
+                });
+            }
+
             context.SaveChanges();
         }
     }
