@@ -27,6 +27,7 @@ namespace Bolao.Data
                 // Ensure admin exists with the stronger password even if already seeded
                 EnsureAdminUser(context);
                 EnsureSemifinalSeeded(context);
+                EnsureFinalsSeeded(context);
                 return; // Already seeded
             }
 
@@ -118,6 +119,7 @@ namespace Bolao.Data
             context.SaveChanges();
 
             EnsureSemifinalSeeded(context);
+            EnsureFinalsSeeded(context);
         }
 
         private static void EnsureAdminUser(BolaoDbContext context)
@@ -187,6 +189,71 @@ namespace Bolao.Data
                     TimeCasaId = teamEng.Id,
                     TimeVisitanteId = teamArg.Id,
                     FaseId = faseSemifinal.Id,
+                    Finalizada = false
+                });
+            }
+
+            context.SaveChanges();
+        }
+
+        private static void EnsureFinalsSeeded(BolaoDbContext context)
+        {
+            // 1. Ensure "Disputa de 3º lugar" phase (Ordem = 4)
+            var faseTerceiro = context.Fases.FirstOrDefault(f => f.Nome == "Disputa de 3º lugar");
+            if (faseTerceiro == null)
+            {
+                faseTerceiro = new Fase
+                {
+                    Nome = "Disputa de 3º lugar",
+                    Ordem = 4
+                };
+                context.Fases.Add(faseTerceiro);
+                context.SaveChanges();
+            }
+
+            // 2. Ensure "Final" phase (Ordem = 5)
+            var faseFinal = context.Fases.FirstOrDefault(f => f.Nome == "Final");
+            if (faseFinal == null)
+            {
+                faseFinal = new Fase
+                {
+                    Nome = "Final",
+                    Ordem = 5
+                };
+                context.Fases.Add(faseFinal);
+                context.SaveChanges();
+            }
+
+            // 3. Get teams safely
+            var teamFra = context.Selecoes.FirstOrDefault(s => s.Sigla == "FRA");
+            var teamEng = context.Selecoes.FirstOrDefault(s => s.Sigla == "ENG");
+            var teamEsp = context.Selecoes.FirstOrDefault(s => s.Sigla == "ESP");
+            var teamArg = context.Selecoes.FirstOrDefault(s => s.Sigla == "ARG");
+
+            // Match 7: França vs Inglaterra (18/07 18:00 local -> 21:00 UTC) - Disputa de 3º lugar
+            if (teamFra != null && teamEng != null && !context.Partidas.Any(p => p.Numero == 7))
+            {
+                context.Partidas.Add(new Partida
+                {
+                    Numero = 7,
+                    DataHora = new DateTime(2026, 7, 18, 21, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = teamFra.Id,
+                    TimeVisitanteId = teamEng.Id,
+                    FaseId = faseTerceiro.Id,
+                    Finalizada = false
+                });
+            }
+
+            // Match 8: Espanha vs Argentina (19/07 16:00 local -> 19:00 UTC) - Final
+            if (teamEsp != null && teamArg != null && !context.Partidas.Any(p => p.Numero == 8))
+            {
+                context.Partidas.Add(new Partida
+                {
+                    Numero = 8,
+                    DataHora = new DateTime(2026, 7, 19, 19, 0, 0, DateTimeKind.Utc),
+                    TimeCasaId = teamEsp.Id,
+                    TimeVisitanteId = teamArg.Id,
+                    FaseId = faseFinal.Id,
                     Finalizada = false
                 });
             }

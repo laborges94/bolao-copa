@@ -26,7 +26,7 @@ namespace Bolao.Tests
         }
 
         [Fact]
-        public void Initialize_ShouldSeedQuartasAndSemifinais()
+        public void Initialize_ShouldSeedAllPhasesAndMatches()
         {
             // Arrange
             using var context = new BolaoDbContext(_contextOptions);
@@ -36,7 +36,7 @@ namespace Bolao.Tests
 
             // Assert
             var fases = context.Fases.OrderBy(f => f.Ordem).ToList();
-            Assert.Equal(2, fases.Count);
+            Assert.Equal(4, fases.Count);
             
             var quartas = fases[0];
             Assert.Equal("Quartas de final", quartas.Nome);
@@ -46,8 +46,16 @@ namespace Bolao.Tests
             Assert.Equal("Semifinal", semifinal.Nome);
             Assert.Equal(3, semifinal.Ordem);
 
+            var terceiro = fases[2];
+            Assert.Equal("Disputa de 3º lugar", terceiro.Nome);
+            Assert.Equal(4, terceiro.Ordem);
+
+            var final = fases[3];
+            Assert.Equal("Final", final.Nome);
+            Assert.Equal(5, final.Ordem);
+
             var partidas = context.Partidas.Include(p => p.TimeCasa).Include(p => p.TimeVisitante).OrderBy(p => p.Numero).ToList();
-            Assert.Equal(6, partidas.Count);
+            Assert.Equal(8, partidas.Count);
 
             // Match 5: França vs Espanha
             var match5 = partidas[4];
@@ -64,6 +72,22 @@ namespace Bolao.Tests
             Assert.Equal("ARG", match6.TimeVisitante?.Sigla);
             Assert.Equal(semifinal.Id, match6.FaseId);
             Assert.False(match6.Finalizada);
+
+            // Match 7: França vs Inglaterra
+            var match7 = partidas[6];
+            Assert.Equal(7, match7.Numero);
+            Assert.Equal("FRA", match7.TimeCasa?.Sigla);
+            Assert.Equal("ENG", match7.TimeVisitante?.Sigla);
+            Assert.Equal(terceiro.Id, match7.FaseId);
+            Assert.False(match7.Finalizada);
+
+            // Match 8: Espanha vs Argentina
+            var match8 = partidas[7];
+            Assert.Equal(8, match8.Numero);
+            Assert.Equal("ESP", match8.TimeCasa?.Sigla);
+            Assert.Equal("ARG", match8.TimeVisitante?.Sigla);
+            Assert.Equal(final.Id, match8.FaseId);
+            Assert.False(match8.Finalizada);
         }
 
         [Fact]
@@ -131,9 +155,9 @@ namespace Bolao.Tests
             Assert.Equal(2, savedPalpite.GolsCasa);
             Assert.Equal(1, savedPalpite.GolsVisitante);
 
-            // 2. Semifinal matches should still be seeded
+            // 2. All 8 matches should still be seeded
             var countPartidas = context.Partidas.Count();
-            Assert.Equal(6, countPartidas);
+            Assert.Equal(8, countPartidas);
         }
 
         public void Dispose()
